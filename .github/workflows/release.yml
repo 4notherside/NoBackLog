@@ -1,0 +1,66 @@
+name: Auto Release Modul Pembasmi
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'module.prop' # Hanya jalan jika kamu mengubah versi di module.prop
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write 
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Ambil Info dari module.prop
+        id: module_info
+        run: |
+          VERSION=$(grep '^version=' module.prop | cut -d'=' -f2 | tr -d '\r')
+          VERSION_CODE=$(grep '^versionCode=' module.prop | cut -d'=' -f2 | tr -d '\r')
+          ID=$(grep '^id=' module.prop | cut -d'=' -f2 | tr -d '\r')
+          
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+          echo "ID=$ID" >> $GITHUB_ENV
+
+      - name: Buat File Zip Modul
+        run: |
+          ZIP_NAME="${ID}-${VERSION}.zip"
+          # Membungkus semua file penting, mengabaikan folder git dan workflow
+          zip -r $ZIP_NAME META-INF system action.sh customize.sh module.prop
+          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
+
+      - name: Generate update.json untuk OTA
+        run: |
+          cat <<EOF > update.json
+          {
+            "version": "${VERSION}",
+            "versionCode": ${VERSION_CODE},
+            "zipUrl": "https://github.com/${{ github.repository }}/releases/download/${VERSION}/${ZIP_NAME}",
+            "changelog": "https://raw.githubusercontent.com/${{ github.repository }}/main/changelog.md"
+          }
+          EOF
+
+      - name: Commit dan Push update.json
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add update.json
+          git commit -m "chore: auto-update update.json ke versi ${VERSION}" || echo "Tidak ada perubahan"
+          git push
+
+      - name: Buat GitHub Release Baru
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: Rilis ${{ env.VERSION }}
+          files: ${{ env.ZIP_NAME }}
+          body: "Pembaruan otomatis Modul Pembasmi Latar Belakang versi ${{ env.VERSION }}."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
