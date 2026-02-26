@@ -4,3 +4,4 @@ version=v1.0
 versionCode=1
 author=Adittt
 description=Modul untuk menghentikan semua proses latar belakang dan melegakan RAM.
+updateJson=https://raw.githubusercontent.com/4notherside/NoBackLog/main/update.json
