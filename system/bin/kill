@@ -1,0 +1,13 @@
+#!/system/bin/sh
+
+echo "===================================="
+echo "     PEMBASMI LATAR BELAKANG"
+echo "===================================="
+
+sync
+echo 3 > /proc/sys/vm/drop_caches
+am kill-all
+
+echo "Status: SUKSES!"
+echo "RAM lega, background bersih."
+echo "===================================="
